@@ -1,6 +1,6 @@
 import { AIProvider, AIConfig } from './types';
 import { LocalAIProvider } from './local-provider';
-import { OpenSourceAIProvider } from './open-source-provider';
+import { OpenSourceProvider } from './open-source-provider';
 import { OpenAIProvider } from './openai-provider';
 
 export function createAIProvider(config: AIConfig): AIProvider {
@@ -8,11 +8,10 @@ export function createAIProvider(config: AIConfig): AIProvider {
     case 'local':
       return new LocalAIProvider(config);
     case 'opensource':
-      return new OpenSourceAIProvider(config);
+      return new OpenSourceProvider(config);
     case 'openai':
       return new OpenAIProvider(config);
     default:
-      console.warn(`Unknown provider "${config.provider}", falling back to local provider`);
-      return new LocalAIProvider(config);
+      throw new Error(`Unknown AI provider: ${config.provider}`);
   }
 }

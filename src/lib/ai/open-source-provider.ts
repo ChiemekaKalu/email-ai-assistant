@@ -1,59 +1,68 @@
 import { BaseAIProvider } from './base';
 import { AIConfig } from './types';
 
-export class OpenSourceAIProvider extends BaseAIProvider {
+export class OpenSourceProvider extends BaseAIProvider {
+  private endpoint: string;
+
   constructor(config: AIConfig) {
     super(config);
+    this.endpoint = config.apiEndpoint || 'http://localhost:3000';
   }
 
   async summarizeEmail(content: string): Promise<string> {
-    // TODO: Implement with open source LLM
-    // Example implementation with local Llama/Mistral:
-    // const prompt = `Summarize this email: ${content}`;
-    // return this.callLocalModel(prompt);
-    return this.fallbackSummarize(content);
+    try {
+      return await this.callLocalModel(`Summarize this email: ${content}`);
+    } catch (error) {
+      console.error('Error summarizing email:', error);
+      return this.fallbackResponse('Unable to generate summary. Using fallback response.');
+    }
   }
 
   async generateResponse(content: string): Promise<string> {
-    // TODO: Implement with open source LLM
-    // Example implementation with local Llama/Mistral:
-    // const prompt = `Generate a professional response to this email: ${content}`;
-    // return this.callLocalModel(prompt);
-    return this.fallbackResponse(content);
+    try {
+      return await this.callLocalModel(`Generate a professional response to this email: ${content}`);
+    } catch (error) {
+      console.error('Error generating response:', error);
+      return this.fallbackResponse('Unable to generate response. Using fallback response.');
+    }
   }
 
   async analyzeImportance(subject: string, content: string): Promise<'high' | 'low'> {
-    // TODO: Implement with open source LLM
-    // Example implementation with local Llama/Mistral:
-    // const prompt = `Analyze if this email is urgent. Subject: ${subject}, Content: ${content}`;
-    // const result = await this.callLocalModel(prompt);
-    // return result.includes('urgent') ? 'high' : 'low';
-    return this.fallbackImportance(subject, content);
+    try {
+      const result = await this.callLocalModel(
+        `Analyze the importance of this email (respond only with "high" or "low"):\nSubject: ${subject}\nContent: ${content}`
+      );
+      return result.toLowerCase().trim() as 'high' | 'low';
+    } catch (error) {
+      console.error('Error analyzing importance:', error);
+      return 'low';
+    }
   }
 
   private async callLocalModel(prompt: string): Promise<string> {
-    // TODO: Implement connection to local LLM
-    // This could be via:
-    // - HTTP API to local server running LLM
-    // - WebAssembly for browser-based inference
-    // - Native messaging to local model server
-    throw new Error('Local LLM not yet implemented');
+    try {
+      const response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.response || '';
+    } catch (error) {
+      console.error('Error calling local model:', error);
+      throw error;
+    }
   }
 
-  // Fallback methods using simple rules
-  private fallbackSummarize(content: string): string {
-    return content.length > 100 
-      ? content.substring(0, 100) + '...'
-      : content;
-  }
-
-  private fallbackResponse(content: string): string {
-    return 'Thank you for your email. I will review and respond soon.';
-  }
-
-  private fallbackImportance(subject: string, content: string): 'high' | 'low' {
-    const urgentKeywords = ['urgent', 'asap', 'important', 'deadline'];
-    const text = (subject + ' ' + content).toLowerCase();
-    return urgentKeywords.some(keyword => text.includes(keyword)) ? 'high' : 'low';
+  private fallbackResponse(message: string): string {
+    console.warn('Using fallback response:', message);
+    return message;
   }
 }
